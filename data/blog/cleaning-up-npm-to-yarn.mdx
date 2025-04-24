@@ -1,0 +1,93 @@
+---
+title: 'How to Clean Up npm and Migrate to Yarn'
+date: '2024-03-19'
+tags: ['yarn', 'npm', 'git', 'deployment']
+draft: false
+summary: 'A step-by-step guide on how to clean up npm files and migrate a project to use Yarn exclusively, avoiding deployment conflicts.'
+---
+
+# How to Clean Up npm and Migrate to Yarn
+
+Sometimes during development, we might accidentally mix package managers in a project. This can happen when running `npm install` in a project that's already using Yarn, or vice versa. In this article, I'll show you how to clean up this situation and ensure your project uses only one package manager.
+
+## The Problem
+
+When you have files from both package managers (`package-lock.json` from npm and `yarn.lock` from Yarn) in the same project, it can cause:
+
+- Dependency conflicts
+- Deployment issues (especially on Vercel)
+- Development environment inconsistencies
+- Confusion for other developers
+
+## The Solution
+
+I'll show you the step-by-step process to clean up the project and migrate to Yarn:
+
+### 1. Remove npm Files
+
+First, we need to remove the npm-specific files:
+
+```bash
+rm -rf node_modules package-lock.json
+```
+
+This command removes:
+
+- The `node_modules` folder (which will be reinstalled)
+- The `package-lock.json` file (npm-specific)
+
+### 2. Reinstall Dependencies with Yarn
+
+Now, let's reinstall all dependencies using Yarn:
+
+```bash
+yarn install
+```
+
+This command will:
+
+- Read the `package.json`
+- Install all dependencies
+- Generate a clean new `yarn.lock`
+
+### 3. Commit Changes
+
+After cleaning up, it's important to commit the changes to Git:
+
+```bash
+git add .
+git commit -m "chore: remove npm files and reinstall dependencies with yarn"
+```
+
+### 4. Push to Repository
+
+Finally, send the changes to the remote repository:
+
+```bash
+git push
+```
+
+## Benefits of Migration
+
+By using only Yarn, you'll have:
+
+- Consistent dependency management
+- Better deployment performance
+- Avoid conflicts between different package managers
+- Clearer documentation for other developers
+
+## Useful Yarn Commands
+
+Here are some common Yarn commands you can use:
+
+- `yarn add [package]` - Install a new dependency
+- `yarn remove [package]` - Remove a dependency
+- `yarn dev` - Run the project in development mode
+- `yarn build` - Create production build
+- `yarn test` - Run tests
+
+## Conclusion
+
+Maintaining a project using only one package manager is a good development practice. It avoids compatibility issues and makes the project easier to maintain. If you're already using Yarn, stay committed to it and avoid mixing with npm.
+
+Remember: consistency is the key to smoother development and more reliable deployments.

@@ -1,0 +1,125 @@
+---
+title: 'How to Handle Cascading Deletes in Prisma and Avoid Foreign Key Errors'
+date: '2025-04-28'
+tags: ['prisma', 'database', 'migration', 'delete', 'foreign key']
+draft: false
+summary: 'A step-by-step guide on how to handle cascading deletes in Prisma and avoid foreign key errors when deleting records with relationships.'
+---
+
+# How to Handle Cascading Deletes in Prisma and Avoid Foreign Key Errors
+
+In many applications, we have relationships between tables that are enforced by foreign keys. When you need to delete a record, these relationships can lead to errors if not handled properly. In this article, I'll show you how to deal with cascading deletes in Prisma, especially when deleting a record that has foreign key constraints.
+
+## The Problem
+
+Imagine you have a `User` table and a `Post` table, where each post references a user via a foreign key (`userId`). If `userId` is required (i.e., it's not nullable), and you try to delete a user without properly handling the posts that reference them, you'll encounter errors due to the foreign key constraint.
+
+The main issues that can occur are:
+
+- Foreign key constraint violations when attempting to delete the user
+- Confusion about how to remove related records (posts) without breaking the database
+- Potential data integrity issues if related records aren't handled properly
+
+## The Solution
+
+To resolve these issues, you need to either configure cascading deletes or manually handle the deletion of related records. Here's how you can do both:
+
+### 1. Use `onDelete: Cascade` in Prisma Schema
+
+The easiest way to handle cascading deletes is to configure the foreign key relationship with the `onDelete: Cascade` option. This ensures that when a user is deleted, all posts associated with them are deleted automatically.
+
+In your `schema.prisma`, define the relation like this:
+
+```prisma
+model User {
+  id    Int     @id @default(autoincrement())
+  name  String
+  email String  @unique
+  posts Post[]
+}
+
+model Post {
+  id     Int    @id @default(autoincrement())
+  title  String
+  userId Int
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+```
+
+With `onDelete: Cascade`, Prisma will automatically delete all related posts when a user is deleted.
+
+### 2. Manual Deletion of Related Posts
+
+If you don't want to use `onDelete: Cascade`, you need to handle the deletion of related posts manually. The first step is to update the `userId` in the `Post` table to avoid foreign key violations. You can either set `userId` to `NULL` (if your schema allows it) or assign it a default value (e.g., a "guest" user).
+
+#### A) Update `userId` to `NULL` (if allowed)
+
+```javascript
+await prisma.post.updateMany({
+  where: {
+    userId: userId,  // ID of the user to be deleted
+  },
+  data: {
+    userId: null,  // Remove the reference to the user
+  },
+});
+```
+
+#### B) Assign a Default User to Posts
+
+If `userId` is required and cannot be set to `NULL`, you may need to assign a default user (e.g., a "guest" user) to the posts:
+
+```javascript
+const anonymousUser = await prisma.user.upsert({
+  where: { email: 'anonimo@example.com' },
+  create: { email: 'anonimo@example.com', name: 'Anônimo' },
+  update: {},
+});
+
+await prisma.post.updateMany({
+  where: {
+    userId: userId,  // ID of the user to be deleted
+  },
+  data: {
+    userId: anonymousUser.id,  // Assign the default user
+  },
+});
+```
+
+### 3. Delete the User
+
+After updating the posts to avoid foreign key violations, you can safely delete the user:
+
+```javascript
+await prisma.user.delete({
+  where: {
+    id: userId,
+  },
+});
+```
+
+### 4. Commit the Changes
+
+Finally, don’t forget to commit these changes to Git and push them to your repository:
+
+```bash
+git add .
+git commit -m "chore: handle cascading deletes and update related posts before deleting user"
+git push
+```
+
+## Benefits of Handling Cascading Deletes Properly
+
+By handling cascading deletes or manually updating related records, you'll benefit from:
+
+- **Avoiding foreign key errors** when deleting records
+- **Maintaining data integrity** by ensuring that related records are properly handled
+- **Clearer application logic**, as developers will know exactly how related data is managed during deletions
+
+## Conclusion
+
+Managing cascading deletes and foreign key constraints in Prisma can be a bit tricky, especially when you're dealing with required foreign key fields. By either using `onDelete: Cascade` or manually handling related records, you can ensure that your database remains consistent and your application runs smoothly.
+
+Remember: whether you choose automatic cascading deletes or handle it manually, the key is to avoid foreign key constraint violations and maintain the integrity of your data.
+
+Let me know if you need further clarification or additional steps on managing cascading deletes in Prisma!
